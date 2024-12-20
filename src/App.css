@@ -1,0 +1,152 @@
+/* App.css */
+
+/* General Styles */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f0f0f0;
+  margin: 0;
+  padding: 0;
+}
+
+h2 {
+  text-align: center;
+  margin-top: 20px;
+}
+
+/* Video Call Container */
+.video-call-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px;
+}
+
+.video-box {
+  position: relative;
+  width: 45%;
+  background-color: #000;
+}
+
+.local-video,
+.remote-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+/* Call Controls */
+.call-controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.control-btn {
+  background-color: #f44336;
+  color: white;
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin: 0 10px;
+  transition: background-color 0.3s ease;
+}
+
+.control-btn:hover {
+  background-color: #d32f2f;
+}
+
+/* Call Initiation Controls */
+.call-initiation {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.call-initiation input {
+  padding: 10px;
+  font-size: 16px;
+  margin-right: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.call-initiation button {
+  background-color: #007bff;
+  color: white;
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.call-initiation button:hover {
+  background-color: #0056b3;
+}
+
+/* Overlay for Incoming Call */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.overlay-content {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  min-width: 300px;
+}
+
+.answer-btn,
+.reject-btn {
+  padding: 10px 20px;
+  font-size: 16px;
+  margin: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.answer-btn {
+  background-color: #4caf50;
+  color: white;
+}
+
+.reject-btn {
+  background-color: #f44336;
+  color: white;
+}
+
+.answer-btn:hover {
+  background-color: #388e3c;
+}
+
+.reject-btn:hover {
+  background-color: #d32f2f;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .video-call-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .video-box {
+    width: 90%;
+    margin-bottom: 20px;
+  }
+}
