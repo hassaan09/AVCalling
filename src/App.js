@@ -2,13 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import './App.css';
 
-const SERVER_URL = 'https://3606-2407-d000-f-cad2-282e-7f18-8a82-becc.ngrok-free.app'; // Update with your server URL
+const SERVER_URL = 'https://75c2-2407-d000-f-cad2-282e-7f18-8a82-becc.ngrok-free.app'; // Update with your server URL
 const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NTI5Njg1MDRmMjEzZWJmZDVmYjAyYyIsImVtYWlsIjoiYmV0YUBnbWFpbC5jb20iLCJ1c2VybmFtZSI6ImJldGEiLCJpYXQiOjE3MzQ2ODgzOTUsImV4cCI6MTczNDc3NDc5NX0.jW1cAZQKbY9qNXQcP6g_VyHRahaT_FqaXOP5AA9Sk-g'; // Replace with your actual token
 
 let peerConnection = null;
 let localStream = null;
 let remoteStream = new MediaStream();
-
 
 const CallComponent = () => {
   const [socket, setSocket] = useState(null);
@@ -20,7 +19,7 @@ const CallComponent = () => {
 
   useEffect(() => {
     const socketInstance = io(`${SERVER_URL}/im`, {
-      query: { token },
+      query: { token }, // You might want to move this to a header on the server side
     });
 
     setSocket(socketInstance);
@@ -63,15 +62,29 @@ const CallComponent = () => {
     });
 
     return () => {
-      socketInstance.disconnect();
+      if (socketInstance) socketInstance.disconnect();
+      if (peerConnection) peerConnection.close();
     };
   }, []);
 
   const configuration = {
-    iceServers: [{ urls: 'stun:stunprotocol.org:3478' }],
+    iceServers: [
+      {
+        urls: "stun:stun.relay.metered.ca:80",
+      },
+      {
+        urls: "turn:global.relay.metered.ca:80",
+        username: "f69b20e8989d12a1b2691442",
+        credential: "pwHhl5klFcFaJPer",
+      },
+      {
+        urls: "turn:global.relay.metered.ca:443",
+        username: "f69b20e8989d12a1b2691442",
+        credential: "pwHhl5klFcFaJPer",
+      },
+    ],
   };
 
-  // WebRTC setup function
   const setupWebRTCConnection = async (callType) => {
     try {
       console.log('Setting up WebRTC connection...');
@@ -81,7 +94,6 @@ const CallComponent = () => {
       });
       console.log('Local stream captured:', localStream);
 
-      // Assign local stream to the local video element
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = localStream;
       }
@@ -89,12 +101,10 @@ const CallComponent = () => {
       remoteStream = new MediaStream();
       peerConnection = new RTCPeerConnection(configuration);
 
-      // Add local stream tracks to peer connection
       localStream.getTracks().forEach((track) => {
         peerConnection.addTrack(track, localStream);
       });
 
-      // Handle incoming remote stream
       peerConnection.ontrack = (event) => {
         console.log('Received remote stream track:', event);
         event.streams[0].getTracks().forEach((track) => {
@@ -105,7 +115,6 @@ const CallComponent = () => {
         }
       };
 
-      // Handle ICE candidates
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
           console.log('ICE Candidate:', event.candidate);
@@ -113,60 +122,25 @@ const CallComponent = () => {
         }
       };
 
-      // Offer/answer flow
       if (callType === 'video') {
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         socket.emit('offer', { receiverId, offer });
       }
-
-      socket.on('offer', async ({ senderId, offer }) => {
-        console.log('Received offer from', senderId);
-        await peerConnection.setRemoteDescription(offer);
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-        socket.emit('answer', { senderId, answer });
-      });
-
-      socket.on('answer', async ({ receiverId, answer }) => {
-        console.log('Received answer from', receiverId);
-        await peerConnection.setRemoteDescription(answer);
-      });
-
-      socket.on('iceCandidate', async ({ candidate }) => {
-        try {
-          await peerConnection.addIceCandidate(candidate);
-        } catch (err) {
-          console.error('Error adding ICE candidate:', err);
-        }
-      });
     } catch (err) {
       console.error('Error setting up WebRTC:', err);
     }
   };
 
-  // Handle answering the incoming call
   const handleAnswerCall = () => {
     if (socket && incomingCall) {
       console.log('Answering call:', incomingCall);
-      
-      // Emit the 'answerCall' event to the server
       socket.emit('answerCall', { callId: incomingCall.callId });
-  
-      // Set call status to "Answered"
       setCallStatus('Answered');
       setIncomingCall(null);
-  
-      // Set up WebRTC connection with the call type
       setupWebRTCConnection(incomingCall.callType);
-  
-      // Emit the 'callAnswered' event to inform the other peer
-      socket.emit('callAnswered', { callId: incomingCall.callId, receiverId });
-  
-      // Now the local peer has answered the call and the server should pass it along to the other peer.
     }
   };
-  
 
   const handleRejectCall = () => {
     if (socket && incomingCall) {
@@ -185,12 +159,11 @@ const CallComponent = () => {
       localStream = null;
       remoteStream = new MediaStream();
       if (peerConnection) {
-        peerConnection.close();  // Close the peer connection
+        peerConnection.close();
         peerConnection = null;
       }
     }
   };
-  
 
   const initiateCall = (type) => {
     if (socket && receiverId) {
@@ -208,25 +181,12 @@ const CallComponent = () => {
       <h2>1-1 Calling</h2>
 
       <div className="video-call-container">
-        {/* Local Stream (User's Video) */}
         <div className="video-box">
-          <video
-            ref={localVideoRef}
-            className="local-video"
-            autoPlay
-            muted
-            playsInline
-          />
+          <video ref={localVideoRef} className="local-video" autoPlay muted playsInline />
         </div>
 
-        {/* Remote Stream (Receiver's Video) */}
         <div className="video-box">
-          <video
-            ref={remoteVideoRef}
-            className="remote-video"
-            autoPlay
-            playsInline
-          />
+          <video ref={remoteVideoRef} className="remote-video" autoPlay playsInline />
         </div>
       </div>
 
@@ -234,7 +194,6 @@ const CallComponent = () => {
         <button className="control-btn" onClick={endCall}>End Call</button>
       </div>
 
-      {/* Overlay for Incoming Call */}
       {incomingCall && callStatus === 'Incoming' && (
         <div className="overlay">
           <div className="overlay-content">
@@ -245,7 +204,6 @@ const CallComponent = () => {
         </div>
       )}
 
-      {/* Input and Button to Start Call */}
       <div className="call-initiation">
         <input
           type="text"
@@ -262,4 +220,3 @@ const CallComponent = () => {
 };
 
 export default CallComponent;
-
