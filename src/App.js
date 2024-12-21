@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import './App.css';
 
-const SERVER_URL = 'https://75c2-2407-d000-f-cad2-282e-7f18-8a82-becc.ngrok-free.app'; // Update with your server URL
-const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NTI5Njg1MDRmMjEzZWJmZDVmYjAyYyIsImVtYWlsIjoiYmV0YUBnbWFpbC5jb20iLCJ1c2VybmFtZSI6ImJldGEiLCJpYXQiOjE3MzQ2ODgzOTUsImV4cCI6MTczNDc3NDc5NX0.jW1cAZQKbY9qNXQcP6g_VyHRahaT_FqaXOP5AA9Sk-g'; // Replace with your actual token
+const SERVER_URL = 'http://localhost:8080'; // Update with your server URL
+const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NTI5Njc0MDRmMjEzZWJmZDVmYjAyOCIsImVtYWlsIjoiYWxwaGFAZ21haWwuY29tIiwidXNlcm5hbWUiOiJhbHBoYSIsImlhdCI6MTczNDc2MTczOCwiZXhwIjoxNzM0ODQ4MTM4fQ.tjgsD6qNt343NP9-kRf4Y9EXVDhhMuuQoFVoFs9_i-4'; // Replace with your actual token
 
 let peerConnection = null;
 let localStream = null;
@@ -19,7 +19,7 @@ const CallComponent = () => {
 
   useEffect(() => {
     const socketInstance = io(`${SERVER_URL}/im`, {
-      query: { token }, // You might want to move this to a header on the server side
+      query: { token: localStorage.getItem('userToken') }, // Retrieve the token correctly
     });
 
     setSocket(socketInstance);
@@ -58,6 +58,27 @@ const CallComponent = () => {
       console.log('Received remote stream:', stream);
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = stream;
+      }
+    });
+
+    // Add the missing listener for ICE candidates
+    socketInstance.on('iceCandidate', ({ peerId, candidate }) => {
+      console.log(`Received ICE Candidate from peerId ${peerId}`);
+  
+      // Make sure the remote description has been set before adding ICE candidates
+      if (peerConnection) {
+        // First ensure the remote description is set
+        if (peerConnection.remoteDescription) {
+          peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+            .then(() => {
+              console.log('ICE Candidate successfully added');
+            })
+            .catch((error) => {
+              console.error('Error adding ICE Candidate:', error);
+            });
+        } else {
+          console.warn('Remote description not set yet, waiting for it...');
+        }
       }
     });
 
@@ -115,10 +136,11 @@ const CallComponent = () => {
         }
       };
 
+      // Fired by STUN server info exchange WEBRTC connection, not signaling server
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
           console.log('ICE Candidate:', event.candidate);
-          socket.emit('iceCandidate', { peerId: receiverId, candidate: event.candidate });
+          socket.emit('iceCandidate', { peerId: incomingCall ? incomingCall.senderId : receiverId, candidate: event.candidate });
         }
       };
 
